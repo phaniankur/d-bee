@@ -1,0 +1,42 @@
+# Ignore virtual environment
+venv/
+# Ignore logs
+logs/
+# Ignore database files
+*.db
+# Ignore local development files
+.env
+# Ignore IDE files
+*.iml
+.idea/
+# Ignore OS files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+# Ignore package manager files
+__pycache__/
+*.egg-info/
+*.egg
+dist/
+build/
+# Ignore tests
+.tox
+.nox
+.coverage
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothes.is.json
+# Ignore editor files
+*.sublime-project
+*.sublime-workspace
+# Ignore Python bytecode files
+*.pyc
+*.pyo
+__pycache__/

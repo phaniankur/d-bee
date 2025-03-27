@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <title>Chat Interface</title>
+    <style>
+        body,
+        html {
+            margin: 0;
+            padding: 0;
+            height: 100%;
+            font-family: "Roboto", sans-serif;
+            background-color: #1d1f20;
+            color: #ececec;
+        }
+
+        .container {
+            display: flex;
+            height: 100vh;
+            justify-content: center;
+        }
+
+        .pd-header {
+            display: none;
+            background-color: #2a2c2e;
+            padding: 20px;
+            text-align: center;
+            /* position: absolute; */
+            top: 0;
+            width: 100%;
+            font-size: 20px;
+        }
+
+        .chat-panel {
+            flex: 2;
+            background-color: #1d1f20;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            max-width: 60%;
+        }
+
+        .query-panel {
+            flex: 1;
+            background-color: #2a2c2e;
+            padding: 20px;
+            overflow-y: auto;
+        }
+
+        .chat-messages {
+            flex-grow: 1;
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        .chat-input {
+            display: flex;
+            padding: 15px;
+            background-color: #2a2c2e;
+            border-radius: 8px;
+            margin-bottom: 16px;
+        }
+
+        #messageInput {
+            flex-grow: 1;
+            background-color: transparent;
+            color: #fdfdff;
+            border: none;
+            padding: 10px;
+            border-radius: 5px;
+            margin-right: 10px;
+        }
+
+        #sendButton {
+            background-color: #ebebeb;
+            color: #040404;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .message {
+            margin-bottom: 15px;
+            padding: 16px;
+            border-radius: 8px;
+            line-height: 1.6;
+        }
+
+        .user-message {
+            background-color: #464646;
+            align-self: flex-end;
+            max-width: 60%;
+        }
+
+        .ai-message {
+            /* background-color: #2A2C2E;
+            align-self: flex-start; */
+            /* max-width: 70%; */
+            /* text-align: left; */
+        }
+
+        #queryInput {
+            width: 100%;
+            background-color: #3a3c3e;
+            color: #fdfdff;
+            border: none;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+        }
+
+        #executeQuery {
+            width: 100%;
+            background-color: #4a90e2;
+            color: #fdfdff;
+            border: none;
+            padding: 10px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .query-results {
+            background-color: #3a3c3e;
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 10px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        /* Code block styling */
+        .code-block {
+            background-color: #0c0c0c;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: "Consolas", "Menlo", "Inconsolata", monospace;
+            white-space: pre-wrap;
+            margin: 10px 0;
+            border-left: 3px solid #216600;
+            font-size: 14px;
+            position: relative;
+        }
+
+        .copy-button {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background-color: #2a2c2e;
+            color: #ececec;
+            border: none;
+            border-radius: 4px;
+            padding: 4px 8px;
+            font-size: 12px;
+            cursor: pointer;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        .code-block:hover .copy-button {
+            opacity: 1;
+        }
+
+        .copy-button:hover {
+            background-color: #3a3c3e;
+        }
+
+        /* Table styling */
+        .markdown-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 10px 0;
+            background-color: #3a3c3e;
+        }
+
+        .markdown-table th,
+        .markdown-table td {
+            border: 1px solid #4a90e2;
+            padding: 8px;
+            text-align: left;
+        }
+
+        .markdown-table th {
+            background-color: #2a2c2e;
+        }
+
+        .inline-code {
+            background-color: #2a2c2e;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: "Consolas", "Menlo", "Inconsolata", monospace;
+            font-size: 0.9em;
+        }
+
+        .bold-text {
+            font-weight: bold;
+        }
+
+        .heading-1 {
+            font-size: 1.8em;
+            font-weight: bold;
+            margin: 0.8em 0;
+            border-bottom: 2px solid #4a90e2;
+            padding-bottom: 0.3em;
+        }
+
+        .heading-2 {
+            font-size: 1.5em;
+            font-weight: bold;
+            margin: 0.6em 0;
+        }
+
+        .heading-3 {
+            font-size: 1.2em;
+            font-weight: bold;
+            margin: 0.4em 0;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="pd-header">DeeBee</div>
+        <div class="chat-panel">
+            <div class="chat-messages" id="chatMessages"></div>
+            <form id="chatForm" class="chat-input">
+                <input type="text" id="messageInput" placeholder="Type your message..." />
+                <button type="submit" id="sendButton">Ask</button>
+            </form>
+        </div>
+        <!-- <div class="query-panel">
+            <input type="text" id="queryInput" placeholder="Enter MySQL query">
+            <button id="executeQuery">Execute Query</button>
+            <div id="queryResults" class="query-results"></div>
+        </div> -->
+    </div>
+
+    <script>
+        const chatMessages = document.getElementById("chatMessages");
+        const messageInput = document.getElementById("messageInput");
+        const sendButton = document.getElementById("sendButton");
+        const queryInput = document.getElementById("queryInput");
+        const executeQueryButton = document.getElementById("executeQuery");
+        const queryResults = document.getElementById("queryResults");
+
+        // Function to add a message to the chat
+        function addMessage(message, isUser = false) {
+            const messageElement = document.createElement('div');
+            messageElement.classList.add('message');
+            messageElement.classList.add(isUser ? 'user-message' : 'ai-message');
+
+            if (!isUser) {
+                // Process the message for markdown elements
+                let currentText = message;
+
+                // Handle code blocks first (since they might contain other markdown symbols)
+                if (message.includes('```')) {
+                    const parts = message.split('```');
+                    parts.forEach((part, index) => {
+                        if (index % 2 === 0) {
+                            // Regular text - process other markdown elements
+                            if (part.trim()) {
+                                const processedText = processMarkdownText(part.trim());
+                                messageElement.appendChild(processedText);
+                            }
+                        } else {
+                            // Code block
+                            const codeElement = document.createElement('div');
+                            codeElement.classList.add('code-block');
+                            codeElement.textContent = part.trim();
+
+                            // Add copy button
+                            const copyButton = document.createElement('button');
+                            copyButton.classList.add('copy-button');
+                            copyButton.textContent = 'Copy';
+                            copyButton.onclick = function () {
+                                navigator.clipboard.writeText(part.trim())
+                                    .then(() => {
+                                        copyButton.textContent = 'Copied!';
+                                        setTimeout(() => {
+                                            copyButton.textContent = 'Copy';
+                                        }, 2000);
+                                    })
+                                    .catch(err => {
+                                        console.error('Failed to copy:', err);
+                                    });
+                            };
+                            codeElement.appendChild(copyButton);
+                            messageElement.appendChild(codeElement);
+                        }
+                    });
+                } else {
+                    // No code blocks, process other markdown elements
+                    const processedText = processMarkdownText(message);
+                    messageElement.appendChild(processedText);
+                }
+            } else {
+                // User messages - just show plain text
+                messageElement.textContent = message;
+            }
+
+            chatMessages.appendChild(messageElement);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        function processMarkdownText(text) {
+            const container = document.createElement("div");
+
+            // Split text into lines to process headings
+            const lines = text.split("\n");
+
+            lines.forEach((line) => {
+                let processedLine = line;
+                const lineElement = document.createElement("div");
+
+                // Process headings
+                if (line.startsWith("### ")) {
+                    const heading = document.createElement("div");
+                    heading.classList.add("heading-3");
+                    heading.textContent = line.substring(4);
+                    container.appendChild(heading);
+                    return;
+                } else if (line.startsWith("## ")) {
+                    const heading = document.createElement("div");
+                    heading.classList.add("heading-2");
+                    heading.textContent = line.substring(3);
+                    container.appendChild(heading);
+                    return;
+                } else if (line.startsWith("# ")) {
+                    const heading = document.createElement("div");
+                    heading.classList.add("heading-1");
+                    heading.textContent = line.substring(2);
+                    container.appendChild(heading);
+                    return;
+                }
+
+                // Process inline code
+                while (processedLine.includes("`")) {
+                    const parts = processedLine.split("`");
+                    processedLine = "";
+                    parts.forEach((part, index) => {
+                        if (index % 2 === 0) {
+                            // Process bold text in non-code parts
+                            processedLine += processBoldText(part);
+                        } else {
+                            // Inline code
+                            processedLine += `<span class="inline-code">${part}</span>`;
+                        }
+                    });
+                }
+
+                // Process remaining bold text
+                if (!processedLine.includes("`")) {
+                    processedLine = processBoldText(processedLine);
+                }
+
+                lineElement.innerHTML = processedLine;
+                container.appendChild(lineElement);
+            });
+
+            return container;
+        }
+
+        function processBoldText(text) {
+            // Process bold text (surrounded by *)
+            while (text.includes("*")) {
+                const parts = text.split("*");
+                text = "";
+                parts.forEach((part, index) => {
+                    if (index % 2 === 0) {
+                        text += part;
+                    } else {
+                        text += `<span class="bold-text">${part}</span>`;
+                    }
+                });
+            }
+            return text;
+        }
+        // Send message functionality
+        const chatForm = document.getElementById("chatForm");
+        chatForm.addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const message = messageInput.value.trim();
+            if (message) {
+                addMessage(message, true);
+                messageInput.value = "";
+
+                // Example API call (replace with your actual API endpoint)
+                try {
+                    const response = await fetch("http://localhost:8000/chat", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                        },
+                        body: JSON.stringify({ prompt: message }),
+                    });
+                    const data = await response.json();
+                    console.log("Fe received the response", data);
+
+                    // let msg = "Generated Query: **Query Explanation** The given SQL query is:```SELECT COUNT(*) AS total_users FROM users;```**Purpose:**This query counts the total number of rows in the `users` table.\n**Purpose:**This query counts the total number of rows in the `users` table.";
+                    addMessage(data.response, false);
+                } catch (error) {
+                    addMessage(
+                        "Sorry, there was an error processing your request.",
+                        false
+                    );
+                }
+            }
+        });
+
+        // Execute query functionality
+        // executeQueryButton.addEventListener('click', async () => {
+        //     const query = queryInput.value.trim();
+        //     if (query) {
+        //         try {
+        //             // Example API call for MySQL query (replace with your actual API endpoint)
+        //             const response = await fetch('http://localhost:8000/query', {
+        //                 method: 'POST',
+        //                 headers: {
+        //                     'Content-Type': 'application/json',
+        //                 },
+        //                 body: JSON.stringify({ query })
+        //             });
+        //             const data = await response.json();
+
+        //             // Clear previous results
+        //             queryResults.innerHTML = '';
+
+        //             // Display query results
+        //             if (data.results && data.results.length > 0) {
+        //                 const table = document.createElement('table');
+        //                 table.style.width = '100%';
+        //                 table.style.borderCollapse = 'collapse';
+
+        //                 // Create header row
+        //                 const headerRow = document.createElement('tr');
+        //                 Object.keys(data.results[0]).forEach(key => {
+        //                     const th = document.createElement('th');
+        //                     th.textContent = key;
+        //                     th.style.border = '1px solid #FDFDFF';
+        //                     th.style.padding = '5px';
+        //                     headerRow.appendChild(th);
+        //                 });
+        //                 table.appendChild(headerRow);
+
+        //                 // Create data rows
+        //                 data.results.forEach(row => {
+        //                     const tr = document.createElement('tr');
+        //                     Object.values(row).forEach(value => {
+        //                         const td = document.createElement('td');
+        //                         td.textContent = value;
+        //                         td.style.border = '1px solid #FDFDFF';
+        //                         td.style.padding = '5px';
+        //                         tr.appendChild(td);
+        //                     });
+        //                     table.appendChild(tr);
+        //                 });
+
+        //                 queryResults.appendChild(table);
+        //             } else {
+        //                 queryResults.textContent = 'No results found.';
+        //             }
+        //         } catch (error) {
+        //             queryResults.textContent = 'Error executing query.';
+        //         }
+        //     }
+        // });
+
+        // Allow sending message with Enter key
+        messageInput.addEventListener("keypress", (e) => {
+            if (e.key === "Enter") {
+                sendButton.click();
+            }
+        });
+
+        // Allow executing query with Enter key
+        // queryInput.addEventListener('keypress', (e) => {
+        //     if (e.key === 'Enter') {
+        //         executeQueryButton.click();
+        //     }
+        // });
+    </script>
+</body>
+
+</html>
