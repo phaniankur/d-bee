@@ -22,11 +22,11 @@
         }
 
         .pd-header {
-            display: none;
+            /* display: none; */
             background-color: #2a2c2e;
             padding: 20px;
             text-align: center;
-            /* position: absolute; */
+            position: absolute;
             top: 0;
             width: 100%;
             font-size: 20px;
@@ -52,6 +52,7 @@
             flex-grow: 1;
             overflow-y: auto;
             padding: 20px;
+            margin-top: 50px;
         }
 
         .chat-input {
@@ -92,6 +93,10 @@
             background-color: #464646;
             align-self: flex-end;
             max-width: 60%;
+            margin-left: auto;
+            /* Add this to move to right */
+            margin-right: 0;
+            /* Add this to align to right edge */
         }
 
         .ai-message {
@@ -185,6 +190,26 @@
             background-color: #2a2c2e;
         }
 
+        .sql-results-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 10px 0;
+            background-color: #0c0c0c;
+            border-radius: 5px;
+            overflow: hidden;
+        }
+
+        .sql-results-table th,
+        .sql-results-table td {
+            border: 1px solid #4a90e2;
+            padding: 8px;
+            text-align: left;
+        }
+
+        .sql-results-table th {
+            background-color: #2a2c2e;
+        }
+
         .inline-code {
             background-color: #2a2c2e;
             padding: 2px 6px;
@@ -252,14 +277,11 @@
 
             if (!isUser) {
                 // Process the message for markdown elements
-                let currentText = message;
-
-                // Handle code blocks first (since they might contain other markdown symbols)
                 if (message.includes('```')) {
                     const parts = message.split('```');
                     parts.forEach((part, index) => {
                         if (index % 2 === 0) {
-                            // Regular text - process other markdown elements
+                            // Regular text
                             if (part.trim()) {
                                 const processedText = processMarkdownText(part.trim());
                                 messageElement.appendChild(processedText);
@@ -286,23 +308,27 @@
                                         console.error('Failed to copy:', err);
                                     });
                             };
+
                             codeElement.appendChild(copyButton);
                             messageElement.appendChild(codeElement);
                         }
                     });
                 } else {
-                    // No code blocks, process other markdown elements
+                    // No code blocks
                     const processedText = processMarkdownText(message);
                     messageElement.appendChild(processedText);
                 }
             } else {
-                // User messages - just show plain text
+                // User message (plain text)
                 messageElement.textContent = message;
             }
 
             chatMessages.appendChild(messageElement);
             chatMessages.scrollTop = chatMessages.scrollHeight;
+
+            return messageElement; // ✅ This allows appending the table later
         }
+
 
         function processMarkdownText(text) {
             const container = document.createElement("div");
@@ -386,86 +412,63 @@
                 addMessage(message, true);
                 messageInput.value = "";
 
-                // Example API call (replace with your actual API endpoint)
                 try {
                     const response = await fetch("http://localhost:8000/chat", {
                         method: "POST",
-                        headers: {
-                            "Content-Type": "application/json",
-                        },
+                        headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({ prompt: message }),
                     });
                     const data = await response.json();
                     console.log("Fe received the response", data);
 
-                    // let msg = "Generated Query: **Query Explanation** The given SQL query is:```SELECT COUNT(*) AS total_users FROM users;```**Purpose:**This query counts the total number of rows in the `users` table.\n**Purpose:**This query counts the total number of rows in the `users` table.";
-                    addMessage(data.response, false);
+                    let finalMessage = '';
+
+                    if (data.query) {
+                        // finalMessage += "\n\n**Final Query:**\n```\n" + data.query + "\n```";
+                        finalMessage += "```\n" + data.query + "\n```";
+                    }
+
+                    // Add the base message to the UI
+                    const messageElement = addMessage(finalMessage, false);
+
+                    // Handle executed results
+                    if (data.executed_result && data.executed_result.columns && data.executed_result.results) {
+                        const { columns, results } = data.executed_result;
+
+                        const table = document.createElement('table');
+                        table.classList.add('sql-results-table');
+
+                        const thead = document.createElement('thead');
+                        const headerRow = document.createElement('tr');
+                        columns.forEach(col => {
+                            const th = document.createElement('th');
+                            th.textContent = col;
+                            headerRow.appendChild(th);
+                        });
+                        thead.appendChild(headerRow);
+                        table.appendChild(thead);
+
+                        const tbody = document.createElement('tbody');
+                        results.forEach(rowData => {
+                            const tr = document.createElement('tr');
+                            rowData.forEach(cell => {
+                                const td = document.createElement('td');
+                                td.textContent = cell;
+                                tr.appendChild(td);
+                            });
+                            tbody.appendChild(tr);
+                        });
+                        table.appendChild(tbody);
+
+                        messageElement.appendChild(document.createElement('br'));
+                        messageElement.appendChild(table);
+                    }
+
                 } catch (error) {
-                    addMessage(
-                        "Sorry, there was an error processing your request.",
-                        false
-                    );
+                    addMessage("Sorry, there was an error processing your request.", false);
                 }
             }
         });
-
-        // Execute query functionality
-        // executeQueryButton.addEventListener('click', async () => {
-        //     const query = queryInput.value.trim();
-        //     if (query) {
-        //         try {
-        //             // Example API call for MySQL query (replace with your actual API endpoint)
-        //             const response = await fetch('http://localhost:8000/query', {
-        //                 method: 'POST',
-        //                 headers: {
-        //                     'Content-Type': 'application/json',
-        //                 },
-        //                 body: JSON.stringify({ query })
-        //             });
-        //             const data = await response.json();
-
-        //             // Clear previous results
-        //             queryResults.innerHTML = '';
-
-        //             // Display query results
-        //             if (data.results && data.results.length > 0) {
-        //                 const table = document.createElement('table');
-        //                 table.style.width = '100%';
-        //                 table.style.borderCollapse = 'collapse';
-
-        //                 // Create header row
-        //                 const headerRow = document.createElement('tr');
-        //                 Object.keys(data.results[0]).forEach(key => {
-        //                     const th = document.createElement('th');
-        //                     th.textContent = key;
-        //                     th.style.border = '1px solid #FDFDFF';
-        //                     th.style.padding = '5px';
-        //                     headerRow.appendChild(th);
-        //                 });
-        //                 table.appendChild(headerRow);
-
-        //                 // Create data rows
-        //                 data.results.forEach(row => {
-        //                     const tr = document.createElement('tr');
-        //                     Object.values(row).forEach(value => {
-        //                         const td = document.createElement('td');
-        //                         td.textContent = value;
-        //                         td.style.border = '1px solid #FDFDFF';
-        //                         td.style.padding = '5px';
-        //                         tr.appendChild(td);
-        //                     });
-        //                     table.appendChild(tr);
-        //                 });
-
-        //                 queryResults.appendChild(table);
-        //             } else {
-        //                 queryResults.textContent = 'No results found.';
-        //             }
-        //         } catch (error) {
-        //             queryResults.textContent = 'Error executing query.';
-        //         }
-        //     }
-        // });
 
         // Allow sending message with Enter key
         messageInput.addEventListener("keypress", (e) => {

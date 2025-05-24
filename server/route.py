@@ -1,7 +1,7 @@
 from fastapi import FastAPI
 from fastapi import Body
 from fastapi.middleware.cors import CORSMiddleware
-from server.controller import receive_prompt
+from server.controller import main_controller
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 import os
@@ -53,8 +53,9 @@ async def generate_query(data: dict = Body(...)):
     """
     Generate SQL query based on natural language prompt
     """
-    result = receive_prompt(data['prompt'])
+    result = main_controller(data['prompt'])
     return {
         "message": "success",
-        "response": result
+        "executed_result": result['executed_result'],
+        "query": result['query'],
     }

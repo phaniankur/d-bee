@@ -6,15 +6,15 @@ Learn SQL effortlessly, generate complex queries, and execute them seamlessly—
 
 D-Bee leverages Llama 3.1 to process and execute queries efficiently. The application is built with a focus on extensibility and ease of use.
 
-![D-Bee in action](images/image.png)
+![D-Bee in action](images/dbee-demo.jpeg)
 
 
 ## How to run the application
 
-1. Install Ollama using pip: `pip install ollama`
-2. Install the Llama 3.1 model locally: `python -m ollama.download --model llama3.1`
+1. Ollama is a must have to run this project: `pip install ollama`
+2. Install the Llama 3.1 model: `python -m ollama.download --model llama3.1`
 3. Install the required packages with pip: `pip install -r requirements.txt`
-4. Run the application using: `fastapi dev server/route.py`
+4. Run the application using: `fastapi run server/route.py`
 
 
 ## Features
@@ -28,12 +28,15 @@ D-Bee leverages Llama 3.1 to process and execute queries efficiently. The applic
 
 ### Phase 1 - Core Implementation
 - [x] Basic application setup with Llama 3.1 integration
-- [ ] Word-to-query execution system
-- [ ] Direct result display implementation
+- [x] Word-to-query execution system
+- [x] Direct result display implementation
 
 ### Phase 2 - Enhanced Features
-- [ ] Testing and benchmarking on different models like `sqlcoder`
-- [ ] Improved schema context understanding
+- [ ] Testing and benchmarking on different models like `sqlcoder` [wip]
+- [ ] Improved schema context understanding [wip]
+- [ ] Choose between installed models from ui
+- [ ] user can modify the query from ui
+- [ ] update/delete query gaurdrailing
 - [ ] Enhanced query processing capabilities
 - [ ] Advanced result visualization
 
@@ -44,7 +47,7 @@ D-Bee leverages Llama 3.1 to process and execute queries efficiently. The applic
 
 ## Getting Started
 
-[Installation and setup instructions will be added as the project develops]
+[Installation and setup instructions will evolve as the project develops]
 
 ## Contributing
 
