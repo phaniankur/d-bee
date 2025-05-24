@@ -1,21 +1,21 @@
-# D-Bee - Simple Sentence to SQL Queries in Seconds
+# 🐝 D-Bee: Natural Language to SQL Execution in Seconds 
 
-Learn SQL effortlessly, generate complex queries, and execute them seamlessly—all with the power of AI.
+D-Bee is an open-source tool that transforms plain English into executable SQL queries in seconds.
 
 ## Overview
 
-D-Bee leverages Llama 3.1 to process and execute queries efficiently. The application is built with a focus on extensibility and ease of use.
+D-Bee leverages local models installed in machine using Ollama to process and execute queries efficiently. The application is built with a focus on extensibility and ease of use.
 
-![D-Bee in action](images/image.png)
+![D-Bee in action](images/dbee_demo.jpeg)
 
 
 ## How to run the application
 
-1. Install Ollama using pip: `pip install ollama`
-2. Install the Llama 3.1 model locally: `python -m ollama.download --model llama3.1`
+1. Ollama is must have to run this project: `pip install ollama`
+2. Install the Llama 3.1 model: `python -m ollama.download --model llama3.1`
 3. Install the required packages with pip: `pip install -r requirements.txt`
-4. Run the application using: `fastapi dev server/route.py`
-
+4. Run the application using: `uvicorn server.route:app --host 0.0.0.0 --port 5656`
+5. App shall run in `http://localhost:5656/`
 
 ## Features
 
@@ -28,13 +28,17 @@ D-Bee leverages Llama 3.1 to process and execute queries efficiently. The applic
 
 ### Phase 1 - Core Implementation
 - [x] Basic application setup with Llama 3.1 integration
-- [ ] Word-to-query execution system
-- [ ] Direct result display implementation
+- [x] Word-to-query execution system
+- [x] Direct result display implementation
 
 ### Phase 2 - Enhanced Features
-- [ ] Testing and benchmarking on different models like `sqlcoder`
-- [ ] Improved schema context understanding
+- [ ] Testing and benchmarking on different models like `sqlcoder` [wip]
+- [ ] Improved schema context understanding [wip]
+- [ ] Choose between installed models from ui
+- [x] user can modify the query from ui
+- [x] update/delete query gaurdrailing
 - [ ] Enhanced query processing capabilities
+- [ ] Remembering chat context
 - [ ] Advanced result visualization
 
 ### Phase 3 - Architecture
@@ -44,7 +48,7 @@ D-Bee leverages Llama 3.1 to process and execute queries efficiently. The applic
 
 ## Getting Started
 
-[Installation and setup instructions will be added as the project develops]
+[Installation and setup instructions will evolve as the project develops]
 
 ## Contributing
 

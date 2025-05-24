@@ -40,3 +40,4 @@ coverage.xml
 *.pyc
 *.pyo
 __pycache__/
+.env
