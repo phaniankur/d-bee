@@ -25,9 +25,11 @@
             /* display: none; */
             background-color: #2a2c2e;
             padding: 20px;
-            text-align: center;
+            text-align: left;
+            padding-left: 20px;
             position: absolute;
             top: 0;
+            left: 0;
             width: 100%;
             font-size: 20px;
         }
@@ -52,7 +54,7 @@
             flex-grow: 1;
             overflow-y: auto;
             padding: 20px;
-            margin-top: 50px;
+            margin-top: 56px;
         }
 
         .chat-input {
@@ -68,9 +70,18 @@
             background-color: transparent;
             color: #fdfdff;
             border: none;
-            padding: 10px;
+            padding: 6px;
             border-radius: 5px;
             margin-right: 10px;
+            outline: none;
+            /* Remove the default focus outline */
+            transition: background-color 0.2s ease;
+        }
+
+        #messageInput:focus {
+            background-color: transparent;
+            /* background-color: rgba(255, 255, 255, 0.15); */
+            /* box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.1); */
         }
 
         #sendButton {
@@ -90,7 +101,7 @@
         }
 
         .user-message {
-            background-color: #464646;
+            background-color: #373737;
             align-self: flex-end;
             max-width: 60%;
             margin-left: auto;
@@ -99,12 +110,12 @@
             /* Add this to align to right edge */
         }
 
-        .ai-message {
-            /* background-color: #2A2C2E;
+        /* .ai-message { */
+        /* background-color: #2A2C2E;
             align-self: flex-start; */
-            /* max-width: 70%; */
-            /* text-align: left; */
-        }
+        /* max-width: 70%; */
+        /* text-align: left; */
+        /* } */
 
         #queryInput {
             width: 100%;
@@ -137,21 +148,52 @@
 
         /* Code block styling */
         .code-block {
-            background-color: #0c0c0c;
+            background-color: #343434;
             padding: 15px;
             border-radius: 5px;
             font-family: "Consolas", "Menlo", "Inconsolata", monospace;
             white-space: pre-wrap;
             margin: 10px 0;
-            border-left: 3px solid #216600;
+            border-left: 3px solid #d5d5d5;
             font-size: 14px;
             position: relative;
+            max-width: 70%;
         }
 
-        .copy-button {
+        .code-block.editing {
+            background-color: #2a2c2e;
+            border: 1px solid #4a90e2;
+        }
+
+        .code-block textarea {
+            width: 100%;
+            background-color: transparent;
+            color: #fdfdff;
+            border: none;
+            font-family: "Consolas", "Menlo", "Inconsolata", monospace;
+            font-size: 14px;
+            resize: vertical;
+            min-height: 100px;
+            outline: none;
+        }
+
+        .code-block-buttons {
             position: absolute;
             top: 5px;
             right: 5px;
+            display: flex;
+            gap: 5px;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        .code-block:hover .code-block-buttons {
+            opacity: 1;
+        }
+
+        .copy-button,
+        .edit-button,
+        .submit-button {
             background-color: #2a2c2e;
             color: #ececec;
             border: none;
@@ -159,16 +201,20 @@
             padding: 4px 8px;
             font-size: 12px;
             cursor: pointer;
-            opacity: 0;
-            transition: opacity 0.2s;
         }
 
-        .code-block:hover .copy-button {
-            opacity: 1;
-        }
-
-        .copy-button:hover {
+        .copy-button:hover,
+        .edit-button:hover,
+        .submit-button:hover {
             background-color: #3a3c3e;
+        }
+
+        .submit-button {
+            background-color: #4a90e2;
+        }
+
+        .submit-button:hover {
+            background-color: #357abd;
         }
 
         /* Table styling */
@@ -191,17 +237,17 @@
         }
 
         .sql-results-table {
-            width: 100%;
+            max-width: 100%;
             border-collapse: collapse;
             margin: 10px 0;
-            background-color: #0c0c0c;
-            border-radius: 5px;
+            background-color: #171717;
+            /* border-radius: 5px; */
             overflow: hidden;
         }
 
         .sql-results-table th,
         .sql-results-table td {
-            border: 1px solid #4a90e2;
+            border: 1px solid #373737;
             padding: 8px;
             text-align: left;
         }
@@ -246,12 +292,12 @@
 
 <body>
     <div class="container">
-        <div class="pd-header">DeeBee</div>
+        <div class="pd-header">D-Bee</div>
         <div class="chat-panel">
             <div class="chat-messages" id="chatMessages"></div>
             <form id="chatForm" class="chat-input">
-                <input type="text" id="messageInput" placeholder="Type your message..." />
-                <button type="submit" id="sendButton">Ask</button>
+                <input type="text" id="messageInput" placeholder="Eg: How many users signed up on waitlist today?" />
+                <button type="submit" id="sendButton">Hit it</button>
             </form>
         </div>
         <!-- <div class="query-panel">
@@ -268,6 +314,145 @@
         const queryInput = document.getElementById("queryInput");
         const executeQueryButton = document.getElementById("executeQuery");
         const queryResults = document.getElementById("queryResults");
+
+        // Function to make a code block editable
+        function makeCodeBlockEditable(codeElement) {
+            const originalText = codeElement.textContent;
+            codeElement.classList.add('editing');
+            
+            // Clear the code element
+            codeElement.textContent = '';
+            
+            // Create textarea
+            const textarea = document.createElement('textarea');
+            textarea.value = originalText;
+            
+            // Create buttons container
+            const buttonsDiv = document.createElement('div');
+            buttonsDiv.classList.add('code-block-buttons');
+            
+            // Create submit button
+            const submitButton = document.createElement('button');
+            submitButton.classList.add('submit-button');
+            submitButton.textContent = 'Submit';
+            submitButton.onclick = async () => {
+                try {
+                    const response = await fetch("http://localhost:8000/execute", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ query: textarea.value }),
+                    });
+                    const data = await response.json();
+                    
+                    // Get the final query
+                    const finalQuery = data.query || textarea.value;
+                    
+                    // Remove editing class and restore code block appearance
+                    codeElement.classList.remove('editing');
+                    
+                    // Clear the code element
+                    codeElement.textContent = '';
+                    
+                    // Add the query text directly
+                    codeElement.textContent = finalQuery;
+                    
+                    // Recreate the buttons
+                    const newButtonsDiv = document.createElement('div');
+                    newButtonsDiv.classList.add('code-block-buttons');
+                    
+                    // Recreate copy button
+                    const newCopyButton = document.createElement('button');
+                    newCopyButton.classList.add('copy-button');
+                    newCopyButton.textContent = 'Copy';
+                    newCopyButton.onclick = () => {
+                        navigator.clipboard.writeText(finalQuery)
+                            .then(() => {
+                                newCopyButton.textContent = 'Copied!';
+                                setTimeout(() => {
+                                    newCopyButton.textContent = 'Copy';
+                                }, 2000);
+                            })
+                            .catch(err => console.error('Failed to copy:', err));
+                    };
+                    
+                    // Recreate edit button
+                    const newEditButton = document.createElement('button');
+                    newEditButton.classList.add('edit-button');
+                    newEditButton.textContent = 'Edit';
+                    newEditButton.onclick = () => makeCodeBlockEditable(codeElement);
+                    
+                    newButtonsDiv.appendChild(newCopyButton);
+                    newButtonsDiv.appendChild(newEditButton);
+                    codeElement.appendChild(newButtonsDiv);
+                    
+                    // Add results table if available
+                    if (data.executed_result && data.executed_result.columns && data.executed_result.results) {
+                        const table = createResultsTable(data.executed_result);
+                        codeElement.parentElement.appendChild(table);
+                    }
+                } catch (error) {
+                    console.error('Error executing query:', error);
+                }
+            };
+            
+            // Create edit button
+            const editButton = document.createElement('button');
+            editButton.classList.add('edit-button');
+            editButton.textContent = 'Edit';
+            editButton.onclick = () => makeCodeBlockEditable(codeElement);
+            
+            // Create copy button
+            const copyButton = document.createElement('button');
+            copyButton.classList.add('copy-button');
+            copyButton.textContent = 'Copy';
+            copyButton.onclick = () => {
+                navigator.clipboard.writeText(textarea.value)
+                    .then(() => {
+                        copyButton.textContent = 'Copied!';
+                        setTimeout(() => {
+                            copyButton.textContent = 'Copy';
+                        }, 2000);
+                    })
+                    .catch(err => console.error('Failed to copy:', err));
+            };
+            
+            // Add all elements
+            buttonsDiv.appendChild(copyButton);
+            buttonsDiv.appendChild(editButton);
+            buttonsDiv.appendChild(submitButton);
+            codeElement.appendChild(textarea);
+            codeElement.appendChild(buttonsDiv);
+        }
+
+        // Function to create results table
+        function createResultsTable(data) {
+            const table = document.createElement('table');
+            table.classList.add('sql-results-table');
+
+            const thead = document.createElement('thead');
+            const headerRow = document.createElement('tr');
+            data.columns.forEach(col => {
+                const th = document.createElement('th');
+                th.textContent = col;
+                headerRow.appendChild(th);
+            });
+            thead.appendChild(headerRow);
+            table.appendChild(thead);
+
+            const tbody = document.createElement('tbody');
+            data.results.forEach(rowData => {
+                const tr = document.createElement('tr');
+                rowData.forEach(cell => {
+                    const td = document.createElement('td');
+                    td.textContent = cell;
+                    tr.appendChild(td);
+                });
+                tbody.appendChild(tr);
+            });
+            table.appendChild(tbody);
+
+            return table;
+        }
 
         // Function to add a message to the chat
         function addMessage(message, isUser = false) {
@@ -292,6 +477,10 @@
                             codeElement.classList.add('code-block');
                             codeElement.textContent = part.trim();
 
+                            // Add buttons container
+                            const buttonsDiv = document.createElement('div');
+                            buttonsDiv.classList.add('code-block-buttons');
+
                             // Add copy button
                             const copyButton = document.createElement('button');
                             copyButton.classList.add('copy-button');
@@ -304,12 +493,18 @@
                                             copyButton.textContent = 'Copy';
                                         }, 2000);
                                     })
-                                    .catch(err => {
-                                        console.error('Failed to copy:', err);
-                                    });
+                                    .catch(err => console.error('Failed to copy:', err));
                             };
 
-                            codeElement.appendChild(copyButton);
+                            // Add edit button
+                            const editButton = document.createElement('button');
+                            editButton.classList.add('edit-button');
+                            editButton.textContent = 'Edit';
+                            editButton.onclick = () => makeCodeBlockEditable(codeElement);
+
+                            buttonsDiv.appendChild(copyButton);
+                            buttonsDiv.appendChild(editButton);
+                            codeElement.appendChild(buttonsDiv);
                             messageElement.appendChild(codeElement);
                         }
                     });
@@ -326,7 +521,7 @@
             chatMessages.appendChild(messageElement);
             chatMessages.scrollTop = chatMessages.scrollHeight;
 
-            return messageElement; // ✅ This allows appending the table later
+            return messageElement;
         }
 
 

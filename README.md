@@ -1,17 +1,17 @@
-# D-Bee - Simple Sentence to SQL Queries in Seconds
+# 🐝 D-Bee: Natural Language to SQL Execution in Seconds 
 
-Learn SQL effortlessly, generate complex queries, and execute them seamlessly—all with the power of AI.
+D-Bee is an open-source tool that transforms plain English into executable SQL queries in seconds.
 
 ## Overview
 
-D-Bee leverages Llama 3.1 to process and execute queries efficiently. The application is built with a focus on extensibility and ease of use.
+D-Bee leverages local models installed in machine using Ollama to process and execute queries efficiently. The application is built with a focus on extensibility and ease of use.
 
-![D-Bee in action](images/dbee-demo.jpeg)
+![D-Bee in action](images/dbee_demo.jpeg)
 
 
 ## How to run the application
 
-1. Ollama is a must have to run this project: `pip install ollama`
+1. Ollama is must have to run this project: `pip install ollama`
 2. Install the Llama 3.1 model: `python -m ollama.download --model llama3.1`
 3. Install the required packages with pip: `pip install -r requirements.txt`
 4. Run the application using: `fastapi run server/route.py`
@@ -35,9 +35,10 @@ D-Bee leverages Llama 3.1 to process and execute queries efficiently. The applic
 - [ ] Testing and benchmarking on different models like `sqlcoder` [wip]
 - [ ] Improved schema context understanding [wip]
 - [ ] Choose between installed models from ui
-- [ ] user can modify the query from ui
-- [ ] update/delete query gaurdrailing
+- [x] user can modify the query from ui
+- [x] update/delete query gaurdrailing
 - [ ] Enhanced query processing capabilities
+- [ ] Remembering chat context
 - [ ] Advanced result visualization
 
 ### Phase 3 - Architecture

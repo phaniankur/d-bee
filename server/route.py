@@ -1,7 +1,8 @@
 from fastapi import FastAPI
 from fastapi import Body
 from fastapi.middleware.cors import CORSMiddleware
-from server.controller import main_controller
+from server.controller import main_controller, execute_controller
+# from server.controller import execute_controller
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 import os
@@ -55,7 +56,26 @@ async def generate_query(data: dict = Body(...)):
     """
     result = main_controller(data['prompt'])
     return {
-        "message": "success",
+        "message": result['message'],
         "executed_result": result['executed_result'],
         "query": result['query'],
+    }
+
+from fastapi import HTTPException
+
+@app.post("/execute")
+async def execute(data: dict = Body(...)):
+    """
+    Generate SQL query based on natural language prompt
+    """
+    executed_result = execute_controller(data['query'])
+    
+    if 'error' in executed_result:
+        
+        raise HTTPException(status_code=500, detail=executed_result['error'])
+    
+    return {
+        "message": "success",
+        "executed_result": executed_result['executed_result'],
+        "query": executed_result['query'],
     }

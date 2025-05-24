@@ -3,16 +3,20 @@ import mysql.connector
 from mysql.connector import Error
 import ollama
 from tabulate import tabulate
+from dotenv import load_dotenv
+import os
+from typing import Optional, Any
 
-# Database connection details
-host = "127.0.0.1"
-port = 3306
-user = "root"
-password = None
-database = "db01"
-# model_name='sqlcoder'
-model_name='codellama:7b'
-# model_name='llama3.1:latest'
+# Load environment variables from .env file
+load_dotenv()
+
+# Database connection details from environment variables with default values
+host = os.getenv('DB_HOST', '127.0.0.1')
+port = int(os.getenv('DB_PORT', '3306'))
+user = os.getenv('DB_USER', 'root')
+password = os.getenv('DB_PASSWORD', '')
+database = os.getenv('DB_NAME', 'db01')
+model_name = os.getenv('MODEL_NAME', 'codellama:7b')
 
 
 class DatabaseQueryAssistant:
@@ -28,11 +32,8 @@ class DatabaseQueryAssistant:
             )
 
             if connection.is_connected():
-                # print("Connected to MySQL database successfully!")
-                # Test connection
                 # Get server info
                 db_info = connection.get_server_info()
-                # print("MySQL Server version:", db_info)
                 
                 # Create a cursor object
                 cursor = connection.cursor()
@@ -40,7 +41,8 @@ class DatabaseQueryAssistant:
                 # Execute a test query
                 cursor.execute("SELECT DATABASE();")
                 record = cursor.fetchone()
-                print("Connected to", record[0])
+                if record and isinstance(record, tuple):
+                    print("Connected to", record[0])
             
             # Store model and generate schema context
             self.model = model_name
@@ -52,7 +54,6 @@ class DatabaseQueryAssistant:
             raise
     
     def _generate_schema_context(self):
-        # print("Generating schema context...")
         """
         Generate comprehensive database schema context
         
@@ -68,16 +69,19 @@ class DatabaseQueryAssistant:
             tables = cursor.fetchall()
             print("Tables:", tables)
             
-            for (table_name,) in tables:
-                # Get column details for each table
-                columns_query = f"DESCRIBE {table_name}"
-                cursor.execute(columns_query)
-                columns = cursor.fetchall()
-                
-                schema_context += f"Table: {table_name}\n"
-                schema_context += "Columns: " + ", ".join([
-                    f"{col[0]} ({col[1]})" for col in columns
-                ]) + "\n\n"
+            for table_tuple in tables:
+                if isinstance(table_tuple, tuple) and len(table_tuple) > 0:
+                    table_name = str(table_tuple[0])
+                    # Get column details for each table
+                    columns_query = f"DESCRIBE {table_name}"
+                    cursor.execute(columns_query)
+                    columns = cursor.fetchall()
+                    
+                    schema_context += f"Table: {table_name}\n"
+                    schema_context += "Columns: " + ", ".join([
+                        f"{str(col[0])} ({str(col[1])})" if isinstance(col, (tuple, list)) and len(col) > 1 
+                        else "unknown" for col in columns
+                    ]) + "\n\n"
             
             return schema_context
         
@@ -126,15 +130,17 @@ class DatabaseQueryAssistant:
         
         return full_prompt
 
-    def generate_query(self, user_prompt):
-        
+    def generate_query(self, user_prompt: str) -> Optional[str]:
         print(user_prompt)
         try:
+            if not isinstance(self.model, str):
+                raise ValueError("Model name must be a string")
+                
             response = ollama.generate(
                 model=self.model,
                 prompt=user_prompt,
                 options={
-                    'temperature': 0.2,  # Lower temperature for more deterministic results
+                    'temperature': 0.2,
                     'top_p': 0.9,
                     'max_tokens': 500
                 }
@@ -155,6 +161,9 @@ class DatabaseQueryAssistant:
         
         Returns:
             list: Query results
+            
+        Raises:
+            mysql.connector.Error: If there is a database error
         """
         try:
             cursor = self.connection.cursor()
@@ -169,8 +178,7 @@ class DatabaseQueryAssistant:
                 return {'affected_rows': cursor.rowcount}
                 
         except mysql.connector.Error as e:
-            print(f"Error executing query: {e}")
-            return None
+            raise # Re-raise the database error
     
     def print_query_results(self, query_result):
         """
