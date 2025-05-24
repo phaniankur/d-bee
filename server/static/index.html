@@ -337,7 +337,7 @@
             submitButton.textContent = 'Submit';
             submitButton.onclick = async () => {
                 try {
-                    const response = await fetch("http://localhost:8000/execute", {
+                    const response = await fetch("http://localhost:5656/execute", {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({ query: textarea.value }),
@@ -608,7 +608,7 @@
                 messageInput.value = "";
 
                 try {
-                    const response = await fetch("http://localhost:8000/chat", {
+                    const response = await fetch("http://localhost:5656/chat", {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({ prompt: message }),

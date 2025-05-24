@@ -14,8 +14,8 @@ D-Bee leverages local models installed in machine using Ollama to process and ex
 1. Ollama is must have to run this project: `pip install ollama`
 2. Install the Llama 3.1 model: `python -m ollama.download --model llama3.1`
 3. Install the required packages with pip: `pip install -r requirements.txt`
-4. Run the application using: `fastapi run server/route.py`
-
+4. Run the application using: `uvicorn server.route:app --host 0.0.0.0 --port 5656`
+5. App shall run in `http://localhost:5656/`
 
 ## Features
 
