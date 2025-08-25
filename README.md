@@ -34,14 +34,24 @@ D-Bee leverages local models installed in machine using Ollama to process and ex
 ### Phase 2 - Enhanced Features
 - [ ] Testing and benchmarking on different models like `sqlcoder` [wip]
 - [ ] Improved schema context understanding [wip]
+- [ ] Cache db tables and schema [wip]
+- [ ] Understanding user intent to execution (query, results, analysis)[wip]
+- [ ] Memory
+- [ ] Planning Mode
 - [ ] Choose between installed models from ui
 - [x] user can modify the query from ui
 - [x] update/delete query gaurdrailing
-- [ ] Enhanced query processing capabilities
 - [ ] Remembering chat context
 - [ ] Advanced result visualization
+- [ ] Human intervention if required.
 
-### Phase 3 - Architecture
+### Phase 3 - UI
+- [ ] A user can describe the schema of the database from ui.
+- [ ] Migrate to Next.js
+- [ ] New Chat UI
+- [ ] Store old chat history to prevent re-execution of queries.
+
+### Phase 4 - Architecture
 - [ ] Plug-and-play component system
 - [ ] Modular extension support
 - [ ] API integration capabilities
