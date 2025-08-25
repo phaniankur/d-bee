@@ -1,4 +1,4 @@
-from intent_classifier import IntentClassifier
+# from intent_classifier import IntentClassifier
 import mysql.connector
 from mysql.connector import Error
 import ollama
@@ -104,7 +104,7 @@ class DatabaseQueryAssistant:
         if intent == 'write':
             full_prompt = (
                 f"{self.schema_context}\n\n"
-                f"User Query: {user_prompt}\n\n"
+                # f"User Query: {user_prompt}\n\n"
                 "Generate a precise SQL query based on the schema and user request. "
                 "Ensure the query is syntactically correct and optimized."
             )
@@ -123,7 +123,7 @@ class DatabaseQueryAssistant:
                 "Analyze the following database schema carefully. Then, based on the user's input, generate a syntactically correct MySQL query that retrieves the correct data.\n"
                 "Return SELECT, DESC, UPDATE queries **only**\n"
                 "Return **only** the final SQL query without any explanations or extra text.\n\n"
-                f"User Request: {user_prompt}\n\n"
+                # f"User Request: {user_prompt}\n\n"
             )
         else:
             raise ValueError(f"Invalid intent {intent}")
@@ -131,7 +131,7 @@ class DatabaseQueryAssistant:
         return full_prompt
 
     def generate_query(self, user_prompt: str) -> Optional[str]:
-        print(user_prompt)
+        # print(user_prompt)
         try:
             if not isinstance(self.model, str):
                 raise ValueError("Model name must be a string")
@@ -216,11 +216,12 @@ def main():
                 # print("user's intent:", intent)
 
                 prompt = assistant.initialize_prompt(user_prompt, "execute")
-                print("Response:", prompt)
-                generated_query = assistant.generate_query(prompt)
+                # print("Response:", prompt)
+                # generated_query = assistant.generate_query(prompt)
+                # openRouterResult = execute_openrouter_api(prompt, user_prompt) // uncomment to test
                 
                 
-                print("Final Query:", generated_query)
+                # print("Final Query:", openRouterResult)
                 # query_result = assistant.execute_query(generated_query)
                 # print("Query Result:", query_result)
                 # assistant.print_query_results(query_result)
