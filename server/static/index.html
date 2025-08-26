@@ -611,7 +611,7 @@
                     const response = await fetch("http://localhost:5656/chat", {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ prompt: message }),
+                        body: JSON.stringify({ prompt: message, sessionID: "sid" + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15), userID: "onkoor" }),
                     });
                     const data = await response.json();
                     console.log("Fe received the response", data);

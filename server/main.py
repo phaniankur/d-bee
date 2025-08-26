@@ -1,4 +1,5 @@
-from intent_classifier import IntentClassifier
+# from intent_classifier import IntentClassifier
+import time
 import mysql.connector
 from mysql.connector import Error
 import ollama
@@ -6,6 +7,7 @@ from tabulate import tabulate
 from dotenv import load_dotenv
 import os
 from typing import Optional, Any
+from server.utils.redis_client import redis_client
 
 # Load environment variables from .env file
 load_dotenv()
@@ -17,12 +19,13 @@ user = os.getenv('DB_USER', 'root')
 password = os.getenv('DB_PASSWORD', '')
 database = os.getenv('DB_NAME', 'db01')
 model_name = os.getenv('MODEL_NAME', 'codellama:7b')
+ttl = os.getenv('SCHEMA_TTL', 3600)
 
 
 class DatabaseQueryAssistant:
-    def __init__(self):
+    def __init__(self, ttl: int = 3600):
         try:
-            # connection string
+            # Database connection
             connection = mysql.connector.connect(
                 host=host,
                 port=port,
@@ -44,10 +47,12 @@ class DatabaseQueryAssistant:
                 if record and isinstance(record, tuple):
                     print("Connected to", record[0])
             
-            # Store model and generate schema context
+            # Store model and initialize schema context
             self.model = model_name
             self.connection = connection
-            self.schema_context = self._generate_schema_context()
+            self.ttl = ttl
+            self._schema_context = None
+            self._last_fetched = 0
         
         except mysql.connector.Error as e:
             print("Db Error", e)
@@ -89,6 +94,35 @@ class DatabaseQueryAssistant:
             print(f"Error generating schema context: {e}")
             return ""
     
+    def _get_schema_cache_key(self) -> str:
+        """Generate Redis key for storing schema cache."""
+        return f"db_schema:{database}"
+
+    def get_schema_context(self) -> str:
+        """Return schema context, checking Redis cache first."""
+        cache_key = self._get_schema_cache_key()
+        
+        # Try to get from Redis cache first
+        cached_schema = redis_client.get(cache_key)
+        if cached_schema:
+            print("\n=== Using cached schema from Redis ===")
+            self._schema_context = cached_schema
+            self._last_fetched = time.time()
+            return self._schema_context
+            
+        # If not in cache or cache miss, generate and cache it
+        if not self._schema_context or (time.time() - self._last_fetched > self.ttl):
+            print("\n=== Generating schema context ===")
+            self._schema_context = self._generate_schema_context()
+            self._last_fetched = time.time()
+            
+            # Cache in Redis with 1 week expiration (604800 seconds)
+            if self._schema_context:
+                redis_client.set(cache_key, self._schema_context, ex=604800)
+                print("\n=== Schema cached in Redis for 1 week ===")
+            
+        return self._schema_context
+        
     def initialize_prompt(self, user_prompt, intent):
         """
         Generate SQL query using Ollama model
@@ -104,7 +138,7 @@ class DatabaseQueryAssistant:
         if intent == 'write':
             full_prompt = (
                 f"{self.schema_context}\n\n"
-                f"User Query: {user_prompt}\n\n"
+                # f"User Query: {user_prompt}\n\n"
                 "Generate a precise SQL query based on the schema and user request. "
                 "Ensure the query is syntactically correct and optimized."
             )
@@ -123,7 +157,7 @@ class DatabaseQueryAssistant:
                 "Analyze the following database schema carefully. Then, based on the user's input, generate a syntactically correct MySQL query that retrieves the correct data.\n"
                 "Return SELECT, DESC, UPDATE queries **only**\n"
                 "Return **only** the final SQL query without any explanations or extra text.\n\n"
-                f"User Request: {user_prompt}\n\n"
+                # f"User Request: {user_prompt}\n\n"
             )
         else:
             raise ValueError(f"Invalid intent {intent}")
@@ -131,7 +165,7 @@ class DatabaseQueryAssistant:
         return full_prompt
 
     def generate_query(self, user_prompt: str) -> Optional[str]:
-        print(user_prompt)
+        # print(user_prompt)
         try:
             if not isinstance(self.model, str):
                 raise ValueError("Model name must be a string")
@@ -216,11 +250,12 @@ def main():
                 # print("user's intent:", intent)
 
                 prompt = assistant.initialize_prompt(user_prompt, "execute")
-                print("Response:", prompt)
-                generated_query = assistant.generate_query(prompt)
+                # print("Response:", prompt)
+                # generated_query = assistant.generate_query(prompt)
+                # openRouterResult = execute_openrouter_api(prompt, user_prompt) // uncomment to test
                 
                 
-                print("Final Query:", generated_query)
+                # print("Final Query:", openRouterResult)
                 # query_result = assistant.execute_query(generated_query)
                 # print("Query Result:", query_result)
                 # assistant.print_query_results(query_result)
