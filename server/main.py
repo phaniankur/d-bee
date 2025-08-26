@@ -1,4 +1,5 @@
 # from intent_classifier import IntentClassifier
+import time
 import mysql.connector
 from mysql.connector import Error
 import ollama
@@ -6,6 +7,7 @@ from tabulate import tabulate
 from dotenv import load_dotenv
 import os
 from typing import Optional, Any
+from server.utils.redis_client import redis_client
 
 # Load environment variables from .env file
 load_dotenv()
@@ -17,12 +19,13 @@ user = os.getenv('DB_USER', 'root')
 password = os.getenv('DB_PASSWORD', '')
 database = os.getenv('DB_NAME', 'db01')
 model_name = os.getenv('MODEL_NAME', 'codellama:7b')
+ttl = os.getenv('SCHEMA_TTL', 3600)
 
 
 class DatabaseQueryAssistant:
-    def __init__(self):
+    def __init__(self, ttl: int = 3600):
         try:
-            # connection string
+            # Database connection
             connection = mysql.connector.connect(
                 host=host,
                 port=port,
@@ -44,10 +47,12 @@ class DatabaseQueryAssistant:
                 if record and isinstance(record, tuple):
                     print("Connected to", record[0])
             
-            # Store model and generate schema context
+            # Store model and initialize schema context
             self.model = model_name
             self.connection = connection
-            self.schema_context = self._generate_schema_context()
+            self.ttl = ttl
+            self._schema_context = None
+            self._last_fetched = 0
         
         except mysql.connector.Error as e:
             print("Db Error", e)
@@ -89,6 +94,35 @@ class DatabaseQueryAssistant:
             print(f"Error generating schema context: {e}")
             return ""
     
+    def _get_schema_cache_key(self) -> str:
+        """Generate Redis key for storing schema cache."""
+        return f"db_schema:{database}"
+
+    def get_schema_context(self) -> str:
+        """Return schema context, checking Redis cache first."""
+        cache_key = self._get_schema_cache_key()
+        
+        # Try to get from Redis cache first
+        cached_schema = redis_client.get(cache_key)
+        if cached_schema:
+            print("\n=== Using cached schema from Redis ===")
+            self._schema_context = cached_schema
+            self._last_fetched = time.time()
+            return self._schema_context
+            
+        # If not in cache or cache miss, generate and cache it
+        if not self._schema_context or (time.time() - self._last_fetched > self.ttl):
+            print("\n=== Generating schema context ===")
+            self._schema_context = self._generate_schema_context()
+            self._last_fetched = time.time()
+            
+            # Cache in Redis with 1 week expiration (604800 seconds)
+            if self._schema_context:
+                redis_client.set(cache_key, self._schema_context, ex=604800)
+                print("\n=== Schema cached in Redis for 1 week ===")
+            
+        return self._schema_context
+        
     def initialize_prompt(self, user_prompt, intent):
         """
         Generate SQL query using Ollama model

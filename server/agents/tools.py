@@ -2,7 +2,26 @@ from langchain_ollama import OllamaLLM
 import re
 
 from server.agents.state import GraphState
+from server.agents.prompts import GENERATE_MYSQL
 from server.main import DatabaseQueryAssistant
+from server.memory import chat_memory
+
+# --- Chat History ---
+def get_chat_history(state: GraphState) -> GraphState:
+    """
+    Retrieves chat history for the current session.
+    """
+    print("\n=== Getting chat history ===")
+    session_id = state.get("session_id")
+    if session_id:
+        history = chat_memory.get_history("onkoor")
+        state['chat_history'] = history
+        print(f"Retrieved {len(history)} messages for session {"onkoor"}")
+    else:
+        print("No session ID found, skipping history retrieval.")
+        state['chat_history'] = []
+    print("=== End get_chat_history ===\n")
+    return state
 
 # --- classify intent ---
 # async def classify_intent(state: GraphState) -> GraphState:
@@ -16,6 +35,20 @@ from server.main import DatabaseQueryAssistant
 #     return state
 
 # Load local model - using the fully qualified model name from Ollama list
+
+def get_schema_ctx(state: GraphState) -> GraphState:
+    """
+    Fetch schema context from DB (cached if still valid).
+    Append it into agent state.
+    """
+    print("\n=== Fetching schema context ===")
+    db_schema = DatabaseQueryAssistant()
+    schema_ctx = db_schema.get_schema_context()
+    # print("Schema context:", schema_ctx)
+    state['schema_context'] = schema_ctx
+    print("=== End get_schema_ctx ===\n")
+    return state
+
 llm = OllamaLLM(model="llama3.1:latest")
 
 async def generate_sql(state: GraphState) -> GraphState:
@@ -30,12 +63,20 @@ async def generate_sql(state: GraphState) -> GraphState:
             state['generated_sql'] = error_msg
             return state
             
-        prompt = f"""
-        You are a SQL assistant. Convert the following request into a MySQL query.
-        Only return the SQL query, nothing else.
-        
-        Request: {state['user_input']}
-        """.strip()
+        if not state['schema_context']:
+            return state
+
+        # Format chat history
+        chat_history = state.get('chat_history', [])
+        formatted_history = "\n".join([f"{role}: {message}" for role, message in chat_history])
+        if not formatted_history:
+            formatted_history = "No previous conversation."
+            
+        prompt = GENERATE_MYSQL.format(
+            schema_context=state['schema_context'],
+            chat_history=formatted_history,
+            user_input=state['user_input']
+        )
         
         print("\nSending to LLM:")
         print(prompt)
@@ -93,7 +134,7 @@ async def generate_sql(state: GraphState) -> GraphState:
         
         # Update state with the generated SQL
         state['generated_sql'] = sql
-        print("\nFinal state:", state)
+        # print("\nFinal state:", state)
         print("=== End generate_sql ===\n")
         return state
         
@@ -124,7 +165,7 @@ def validate_sql(state: GraphState) -> GraphState:
         return state
 
     s = sql.upper()
-    if any(tok in s for tok in ["DROP ", "TRUNCATE ", "ALTER ", "UPDATE "]):
+    if any(tok in s for tok in ["DROP ", "TRUNCATE ", "ALTER ", "UPDATE ", "DELETE "]):
         state['error'] = "Dangerous SQL detected"
         return state
 
@@ -145,7 +186,7 @@ def validate_sql(state: GraphState) -> GraphState:
 # engine_ro = create_engine(MYSQL_DSN_RO, pool_pre_ping=True, pool_recycle=3600)
 
 def execute_sql(state: GraphState) -> GraphState:
-    print("Executing SQL:", state)
+    # print("Executing SQL:", state)
     if state.get('intent') == "query":
         print("No execution for query")
         # No execution, just return the query
@@ -154,15 +195,15 @@ def execute_sql(state: GraphState) -> GraphState:
         print("Error in execution exiting query execution:", state.get('error'))
         return state
 
-    sql = state.validated_sql
+    sql = state.get('validated_sql')
 
     try:
-        # assistant = DatabaseQueryAssistant()
-        # query_result = assistant.execute_query(sql)
-        # print("QUERY RESULT", query_result)
+        assistant = DatabaseQueryAssistant()
+        query_result = assistant.execute_query(sql)
+        print("QUERY RESULT", query_result)
         
-        # state['execution_result'] = query_result
-        state['execution_result'] = "query_result"
+        state['execution_result'] = query_result
+        # state['execution_result'] = "query_result"
     except Exception as e:
         state['error'] = f"Execution error: {e}"
     return state
