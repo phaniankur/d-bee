@@ -24,6 +24,46 @@ D-Bee leverages local models installed in machine using Ollama to process and ex
 - Context-aware schema understanding
 - Modular plug-and-play architecture
 
+## Flow Diagram
+
+                ┌──────────────────┐
+                │ intent_classifier │
+                └─────────┬────────┘
+                          │
+         ┌────────────────┴────────────────┐
+         │                │                │
+   intent="sql_query"  intent="execute"  intent="chitchat"
+         │                │                │
+         └────────────────┴────────────────┘
+                          │
+                ┌─────────▼─────────┐
+                │  get_chat_history │
+                └─────────┬─────────┘
+                          │
+         ┌────────────────┴────────────────┐
+         │                                 │
+ intent="sql_query"/"execute"        intent="chitchat"
+         │                                 │
+┌────────▼─────────┐                 ┌─────▼─────┐
+│   get_schema_ctx │                 │  chitchat │
+└────────┬─────────┘                 └─────┬─────┘
+         │                                 │
+ ┌───────▼─────────┐                       │
+ │   generate_sql  │                       │
+ └───────┬─────────┘                       │
+         │                                 │
+ ┌───────▼─────────┐                       │
+ │    validate     │                       │
+ └───────┬─────────┘                       │
+         │                                 │
+ ┌───────▼─────────┐                       │
+ │     execute     │                       │
+ └───────┬─────────┘                       │
+         │                                 │
+         ▼                                 ▼
+        END                               END
+
+
 ## Roadmap
 
 ### Phase 1 - Core Implementation
@@ -45,7 +85,7 @@ D-Bee leverages local models installed in machine using Ollama to process and ex
 - [x] Remembering chat context
 - [ ] Advanced result visualization
 - [ ] Human intervention if required.
-- [ ] Non sql questions shall not be executed.
+- [x] Gaurdrail for Non sql questions shall not be executed.
 - [ ] Stream response instead of waiting for full response. 
 
 ### Phase 3 - UI

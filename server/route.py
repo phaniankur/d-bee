@@ -4,7 +4,6 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from typing import Optional
 import os
-import uuid
 
 from server.agents.agent import process_query
 from server.memory import chat_memory
@@ -50,10 +49,9 @@ async def generate_query(data: dict = Body(...)):
         sessionID = data['sessionID']
 
         response = await process_query(userID, prompt, sessionID)
-
         # Store the conversation turn
         system_message = response.get("query", "")
-        chat_memory.add_message(userID, prompt, system_message)
+        chat_memory.add_message(sessionID, prompt, system_message)
 
         response['sessionID'] = sessionID
         print(f"\nSending response: {response}")
