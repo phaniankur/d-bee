@@ -18,15 +18,15 @@ class ChatMemory:
         """Generate Redis key for user's chat history."""
         return f"user:{user_id}:chathistory"
     
-    def add_message(self, user_id: str, user_message: str, ai_message: str):
+    def add_message(self, sessionID: str, user_message: str, ai_message: str):
         """Add a user and AI message to the user's chat history in Redis.
         
         Args:
-            user_id: Unique identifier for the user
+            sessionID: Unique identifier for the user
             user_message: The message from the user
             ai_message: The response from the AI
         """
-        user_key = self._get_user_key(user_id)
+        user_key = self._get_user_key(sessionID)
         
         # Create message pair
         messages = [

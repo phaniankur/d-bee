@@ -2,9 +2,25 @@ from langchain_ollama import OllamaLLM
 import re
 
 from server.agents.state import GraphState
-from server.agents.prompts import GENERATE_MYSQL
+from server.agents.prompts import GENERAL_CHITCHAT, GENERATE_MYSQL
 from server.main import DatabaseQueryAssistant
 from server.memory import chat_memory
+
+# --- classify intent ---
+def intent_classifier(state: GraphState) -> GraphState:
+    text = state.get('user_input').lower()
+    sql_keywords = ["select", "count", "how many", "show", "list", "find", "users", "orders"]
+    
+    print("\n=== Intent classification ===")
+
+    if any(kw in text for kw in sql_keywords):
+        state['intent'] = "execute"
+    else:
+        state['intent'] = "chitchat"
+    
+    print("Classified Intent:", state['intent'])
+    print("=== End intent_classifier ===\n")
+    return state
 
 # --- Chat History ---
 def get_chat_history(state: GraphState) -> GraphState:
@@ -12,30 +28,18 @@ def get_chat_history(state: GraphState) -> GraphState:
     Retrieves chat history for the current session.
     """
     print("\n=== Getting chat history ===")
-    session_id = state.get("session_id")
+    session_id = state.get("sessionID")
     if session_id:
-        history = chat_memory.get_history("onkoor")
+        history = chat_memory.get_history(session_id)
         state['chat_history'] = history
-        print(f"Retrieved {len(history)} messages for session {"onkoor"}")
+        print(f"Retrieved {len(history)} messages for session {session_id}")
     else:
         print("No session ID found, skipping history retrieval.")
         state['chat_history'] = []
     print("=== End get_chat_history ===\n")
     return state
 
-# --- classify intent ---
-# async def classify_intent(state: GraphState) -> GraphState:
-#     text = state.user_input.lower()
-#     if "sql" in text or "query" in text:
-#         state.intent = "query"
-#     elif any(w in text for w in ["show", "list", "all results", "give me data"]):
-#         state.intent = "results"
-#     else:
-#         state.intent = "analysis"
-#     return state
-
-# Load local model - using the fully qualified model name from Ollama list
-
+# --- Schema Context ---
 def get_schema_ctx(state: GraphState) -> GraphState:
     """
     Fetch schema context from DB (cached if still valid).
@@ -54,7 +58,7 @@ llm = OllamaLLM(model="llama3.1:latest")
 async def generate_sql(state: GraphState) -> GraphState:
     try:
         print("\n=== Starting generate_sql ===")
-        print("State received:", state)
+        # print("State received:", state)
         
         # Ensure state is properly initialized
         if not state.get('user_input'):
@@ -79,7 +83,7 @@ async def generate_sql(state: GraphState) -> GraphState:
         )
         
         print("\nSending to LLM:")
-        print(prompt)
+        # print("PROMPT:", prompt)
         
         try:
             print("\nCalling llm.ainvoke()...")
@@ -187,7 +191,7 @@ def validate_sql(state: GraphState) -> GraphState:
 
 def execute_sql(state: GraphState) -> GraphState:
     # print("Executing SQL:", state)
-    if state.get('intent') == "query":
+    if state.get('intent') == "sql_query":
         print("No execution for query")
         # No execution, just return the query
         return state
@@ -208,6 +212,20 @@ def execute_sql(state: GraphState) -> GraphState:
         state['error'] = f"Execution error: {e}"
     return state
 
+
+# --- Chitchat ---
+async def chitchat(state: GraphState) -> GraphState:
+    """
+    Handle non-SQL user queries (general chat).
+    """
+    print("\n=== Chitchat Begin ===")
+    prompt = GENERAL_CHITCHAT.format(user_input=state.get('user_input'), chat_history=state.get('chat_history'))
+    out = await llm.ainvoke(prompt)
+    print("\nLLM OUTPUT:", out)
+
+    state['generated_sql'] = out.content if hasattr(out, "content") else str(out)
+    print("=== End chitchat ===\n")
+    return state
 
 # --- Analyze Results ---
 async def analyze_results(state: GraphState) -> GraphState:
