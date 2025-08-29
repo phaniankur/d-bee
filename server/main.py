@@ -58,6 +58,26 @@ class DatabaseQueryAssistant:
             print("Db Error", e)
             raise
     
+    def get_table_names(self):
+        """
+        Get a list of all table names in the database
+        
+        Returns:
+            list: List of table names
+        """
+        try:
+            cursor = self.connection.cursor()
+            cursor.execute("SHOW TABLES;")
+            tables = cursor.fetchall()
+            
+            # Extract table names from the result tuples
+            table_names = [str(table[0]) for table in tables if table and len(table) > 0]
+            return table_names
+            
+        except mysql.connector.Error as e:
+            print(f"Error fetching table names: {e}")
+            return []
+    
     def _generate_schema_context(self):
         """
         Generate comprehensive database schema context
@@ -68,25 +88,23 @@ class DatabaseQueryAssistant:
         try:
             schema_context = "Database Schema:\n"
             
-            # Query to get all tables in the database
-            cursor = self.connection.cursor()
-            cursor.execute("SHOW TABLES;")
-            tables = cursor.fetchall()
-            print("Tables:", tables)
+            # Get all table names
+            table_names = self.get_table_names()
+            print("Tables:", table_names)
             
-            for table_tuple in tables:
-                if isinstance(table_tuple, tuple) and len(table_tuple) > 0:
-                    table_name = str(table_tuple[0])
-                    # Get column details for each table
-                    columns_query = f"DESCRIBE {table_name}"
-                    cursor.execute(columns_query)
-                    columns = cursor.fetchall()
-                    
-                    schema_context += f"Table: {table_name}\n"
-                    schema_context += "Columns: " + ", ".join([
-                        f"{str(col[0])} ({str(col[1])})" if isinstance(col, (tuple, list)) and len(col) > 1 
-                        else "unknown" for col in columns
-                    ]) + "\n\n"
+            cursor = self.connection.cursor()
+            
+            for table_name in table_names:
+                # Get column details for each table
+                columns_query = f"DESCRIBE {table_name}"
+                cursor.execute(columns_query)
+                columns = cursor.fetchall()
+                
+                schema_context += f"Table: {table_name}\n"
+                schema_context += "Columns: " + ", ".join([
+                    f"{str(col[0])} ({str(col[1])})" if isinstance(col, (tuple, list)) and len(col) > 1 
+                    else "unknown" for col in columns
+                ]) + "\n\n"
             
             return schema_context
         

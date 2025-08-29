@@ -2,7 +2,7 @@ from langchain_ollama import OllamaLLM
 import re
 
 from server.agents.state import GraphState
-from server.agents.prompts import GENERAL_CHITCHAT, GENERATE_MYSQL
+from server.agents.prompts import GENERAL_CHITCHAT, GENERATE_MYSQL, INTENT_CLASSIFIER
 from server.main import DatabaseQueryAssistant
 from server.memory import chat_memory
 
@@ -22,8 +22,70 @@ def intent_classifier(state: GraphState) -> GraphState:
     print("=== End intent_classifier ===\n")
     return state
 
+# --- llm powered intent ---
+async def llm_intent_classifier(state: GraphState) -> GraphState:
+    try:
+        print("\n=== Starting llm_intent_classifier ===", state)
+        allowed_intents = {
+            "chitchat": "The user's intent is for general chat and there is no context of database schema or query. Always return this if there is no context of MySQL.",
+            "sql_query": "The user's intent is to only generate a MySQL query.",
+            "execute": "The user's intent is to generate and execute a MySQL query.",
+            "explain_results": "User wants an explanation of results from the query."
+        }
+        chat_history = state.get('chat_history', [])
+        formatted_history = "\n".join([f"{role}: {message}" for role, message in chat_history])
+
+        prompt = INTENT_CLASSIFIER.format(
+            allowed_intents=allowed_intents,
+            chat_history=formatted_history,
+            schema_context=state['tables'],
+            user_input=state['user_input']
+        )
+        
+        print("\nSending to LLM:")
+        print("PROMPT:", prompt)
+        
+        try:
+            print("\nCalling llm.ainvoke()...")
+            # Get raw response from LLM
+            response = await llm.ainvoke(prompt)
+            print(f"\nRaw LLM response type: {type(response)}")
+            print(f"Raw LLM response: {response}")
+            
+            # Convert response to string if it's not already
+            if hasattr(response, 'content'):
+                out = response.content
+            elif hasattr(response, 'text'):
+                out = response.text
+            elif isinstance(response, str):
+                out = response
+            else:
+                out = str(response)
+
+            state['intent'] = out
+            print("\nProcessed LLM output:", out)
+            print("\nUpdated State:", state['intent'])
+            
+        except Exception as e:
+            error_msg = f"Error calling LLM: {str(e)}"
+            print(f"\n{error_msg}")
+            print(f"LLM type: {type(llm)}")
+            print(f"LLM model: {getattr(llm, 'model', 'unknown')}")
+            state['intent'] = f"Error: {error_msg}"
+            return state
+
+        return state
+
+    except Exception as e:
+        error_msg = f"Error calling LLM: {str(e)}"
+        print(f"\n{error_msg}")
+        print(f"LLM type: {type(llm)}")
+        print(f"LLM model: {getattr(llm, 'model', 'unknown')}")
+        state['intent'] = f"Error: {error_msg}"
+        return state
+
 # --- Chat History ---
-def get_chat_history(state: GraphState) -> GraphState:
+def get_chat_history(state: GraphState) -> dict:
     """
     Retrieves chat history for the current session.
     """
@@ -31,16 +93,12 @@ def get_chat_history(state: GraphState) -> GraphState:
     session_id = state.get("sessionID")
     if session_id:
         history = chat_memory.get_history(session_id)
-        state['chat_history'] = history
-        print(f"Retrieved {len(history)} messages for session {session_id}")
-    else:
-        print("No session ID found, skipping history retrieval.")
-        state['chat_history'] = []
+        return {"chat_history": history}
     print("=== End get_chat_history ===\n")
-    return state
+    return {"chat_history": []}
 
 # --- Schema Context ---
-def get_schema_ctx(state: GraphState) -> GraphState:
+def get_schema_ctx(state: GraphState) -> dict:
     """
     Fetch schema context from DB (cached if still valid).
     Append it into agent state.
@@ -49,10 +107,26 @@ def get_schema_ctx(state: GraphState) -> GraphState:
     db_schema = DatabaseQueryAssistant()
     schema_ctx = db_schema.get_schema_context()
     # print("Schema context:", schema_ctx)
-    state['schema_context'] = schema_ctx
+    # state['schema_context'] = schema_ctx
     print("=== End get_schema_ctx ===\n")
-    return state
+    return {"schema_context": schema_ctx}
 
+# --- Tables ---
+def get_tables(state: GraphState) -> dict:
+    """
+    Fetch table names from DB (cached if still valid).
+    Append it into agent state.
+    """
+    print("\n=== Fetching tables ===")
+    db_schema = DatabaseQueryAssistant()
+    tables = db_schema.get_table_names()
+    # print("Schema context:", schema_ctx)
+    # state['tables'] = tables
+    print("=== End get_tables ===\n")
+    # return state
+    return {"tables": tables}
+
+# --- GENERATE SQL ---
 llm = OllamaLLM(model="llama3.1:latest")
 
 async def generate_sql(state: GraphState) -> GraphState:
