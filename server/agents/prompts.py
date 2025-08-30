@@ -50,7 +50,7 @@ Allowed intents:
 Definitions:
 - chitchat: The user is talking casually or conversationally, not directly asking for a MySQL query or query results. 
   Examples: greetings, jokes, meta talk like “let’s talk sql”, “do you know databases?”, “cool thanks”.  
-- sql_query: The user explicitly asks for a MySQL query to be written, without asking to run it or see results. 
+- sql_query: The user explicitly asks for MySQL query to be written, without asking to run it or see results. 
   Examples: “Write a query to fetch all users”, “Show me the SQL for top 10 customers”.  
 - execute: The user asks to get data or perform an action on the database (generate AND execute a query). This is the default intent for most SQL-related requests.  
   Examples: “Get me the top 5 customers by revenue”, “How many users signed up today?”, “List all failed logins”.  
@@ -82,7 +82,6 @@ Rules:
 """
 
 # ------- GENERATE ----------
-
 GENERATE_MYSQL = """
 You are a SQL assistant. Convert the following request into a MySQL query based on the provided database schema and chat history.
 Only return the SQL query, nothing else.
@@ -116,4 +115,12 @@ Context of the previous conversation:
 User asked: {user_input}
 
 Respond conversationally without generating SQL.
+"""
+
+EXPLAIN_RESULTS = """
+You are given a mysql query and the results of that query. Create an analysis of the results and make a summary of the results.
+Query: {query}
+Results: {results}
+
+Keep the answers short and to the point.
 """

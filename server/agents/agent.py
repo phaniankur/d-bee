@@ -2,7 +2,7 @@ from typing import Dict, Any, Optional
 from fastapi import HTTPException
 from langgraph.graph import StateGraph, END
 
-from server.agents.tools import generate_sql, get_schema_ctx, get_chat_history, get_tables, intent_classifier, llm_intent_classifier
+from server.agents.tools import explain_results, generate_sql, get_schema_ctx, get_chat_history, get_tables, intent_classifier, llm_intent_classifier
 from server.agents.tools import execute_sql, validate_sql, chitchat
 from server.agents.state import GraphState
 
@@ -18,6 +18,7 @@ def create_agent():
     workflow.add_node("validate", validate_sql)
     workflow.add_node("execute", execute_sql)
     workflow.add_node("get_tables", get_tables)
+    workflow.add_node("explain_results", explain_results)
     workflow.add_node("chitchat", chitchat)
 
     workflow.set_entry_point("get_chat_history")
@@ -29,21 +30,21 @@ def create_agent():
         {
             "sql_query": "generate_sql",
             "execute": "generate_sql",
+            "explain_results": "generate_sql",
             "chitchat": "chitchat",   # 🔑 funnel chitchat through history
             # 🔑 can be extended to other intents
         },
     )
 
-    # After history, decide where to go
-    # workflow.add_conditional_edges(
-    #     "get_chat_history",
-    #     lambda state: state.get("intent"),
-    #     {
-    #         "sql_query": "get_schema_ctx",
-    #         "execute": "get_schema_ctx",
-    #         "chitchat": "chitchat",          # 🔑 now go to chitchat
-    #     },
-    # )
+    # After Execution, decide where to go
+    workflow.add_conditional_edges(
+        "execute",
+        lambda state: state.get("intent"),
+        {
+            "explain_results": "explain_results",
+            "execute": END,
+        },
+    )
 
     workflow.add_edge("get_chat_history", "get_schema_ctx")
     workflow.add_edge("get_chat_history", "get_tables")
@@ -91,11 +92,13 @@ async def process_query(userID: str, prompt: str, sessionID: Optional[str] = Non
         # Get the generated SQL and execution result
         generated_sql = result_dict.get('generated_sql', 'No SQL generated')
         executed_result = result_dict.get('execution_result', 'No result executed')
+        final_answer = result_dict.get('final_answer', 'No final answer')
         
         return {
             "message": "success",
             "query": generated_sql,
-            "executed_result": executed_result
+            "executed_result": executed_result,
+            "final_answer": final_answer
         }
         
     except Exception as e:

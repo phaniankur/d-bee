@@ -665,6 +665,13 @@
                         messageElement.appendChild(document.createElement('br'));
                         messageElement.appendChild(table);
                     }
+                    
+                    if (data.final_answer) {
+                        const answerPara = document.createElement('p');
+                        answerPara.textContent = data.final_answer;
+                        messageElement.appendChild(document.createElement('br'));
+                        messageElement.appendChild(answerPara);
+                    }
 
                 } catch (error) {
                     addMessage("Sorry, there was an error processing your request.", false);

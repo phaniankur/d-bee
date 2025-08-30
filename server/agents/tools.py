@@ -2,7 +2,7 @@ from langchain_ollama import OllamaLLM
 import re
 
 from server.agents.state import GraphState
-from server.agents.prompts import GENERAL_CHITCHAT, GENERATE_MYSQL, INTENT_CLASSIFIER
+from server.agents.prompts import EXPLAIN_RESULTS, GENERAL_CHITCHAT, GENERATE_MYSQL, INTENT_CLASSIFIER
 from server.main import DatabaseQueryAssistant
 from server.memory import chat_memory
 
@@ -286,6 +286,22 @@ def execute_sql(state: GraphState) -> GraphState:
         state['error'] = f"Execution error: {e}"
     return state
 
+# --- explain results ---
+async def explain_results(state: GraphState) -> GraphState:
+    print("\n=== Explain Results Begin ===")
+    if state.get('intent') != "explain_results" or not state.get('execution_result'):
+        return state
+
+    prompt = EXPLAIN_RESULTS.format(
+            query=state['validated_sql'],
+            results=state['execution_result']
+        )
+
+    out = await llm.ainvoke(prompt)
+    print("\nLLM OUTPUT:", out)
+    state['final_answer'] = out.strip()
+    print("=== End explain_results ===\n")
+    return state
 
 # --- Chitchat ---
 async def chitchat(state: GraphState) -> GraphState:
@@ -299,22 +315,4 @@ async def chitchat(state: GraphState) -> GraphState:
 
     state['generated_sql'] = out.content if hasattr(out, "content") else str(out)
     print("=== End chitchat ===\n")
-    return state
-
-# --- Analyze Results ---
-async def analyze_results(state: GraphState) -> GraphState:
-    if state.get('intent') != "analysis" or not state.get('execution_result'):
-        return state
-
-    prompt = f"""
-    User request: {state.get('user_input')}
-
-    SQL query result (rows):
-    {state.get('execution_result')}
-
-    Write a descriptive natural language answer, summarizing the results clearly.
-    """
-
-    out = await llm.ainvoke(prompt)
-    state['final_answer'] = out.strip()
     return state

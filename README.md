@@ -75,7 +75,7 @@ D-Bee leverages local models installed in machine using Ollama to process and ex
 - [ ] Testing and benchmarking on different models like `sqlcoder` [wip]
 - [x] Improved schema context understanding
 - [x] Cache db tables and schema
-- [ ] Understanding user intent to execution (query, results, analysis)[wip]
+- [x] Understanding user intent to execution (sql_query" | "chitchat" | "execute" | "explain_results)
 - [x] Short term memory (remembering chat context)
 - [ ] Long term memory
 - [ ] Planning Mode
